@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "./OffreListManager.css";
 
 const OffreListManager = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     id: null,
     titre: "",
@@ -15,9 +16,9 @@ const OffreListManager = () => {
   });
   const [offres, setOffres] = useState([]);
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check if there's an offer to edit from navigation state
     if (location.state && location.state.offreToEdit) {
       const { offreToEdit } = location.state;
       setFormData({
@@ -35,15 +36,19 @@ const OffreListManager = () => {
 
   const fetchOffres = async () => {
     try {
+      setLoading(true);
       const response = await fetch("https://localhost:7020/api/offre/list");
       const result = await response.json();
       if (response.ok) {
         setOffres(result);
+        setMessage("");
       } else {
         setMessage("Erreur lors du chargement des offres");
       }
     } catch (error) {
       setMessage("Erreur réseau");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,9 +74,9 @@ const OffreListManager = () => {
       });
       const result = await response.json();
       if (response.ok) {
-        setMessage(result.message);
+        setMessage("Offre créée avec succès !");
         resetForm();
-        fetchOffres();
+        navigate("/offre-list"); // Rediriger vers la page OffreList
       } else {
         setMessage(result.message || "Erreur lors de la création");
       }
@@ -101,9 +106,9 @@ const OffreListManager = () => {
       });
       const result = await response.json();
       if (response.ok) {
-        setMessage(result.message);
+        setMessage("Offre mise à jour avec succès !");
         resetForm();
-        fetchOffres();
+        navigate("/offre-list"); // Rediriger après mise à jour
       } else {
         setMessage(result.message || "Erreur lors de la mise à jour");
       }
@@ -120,7 +125,7 @@ const OffreListManager = () => {
       });
       const result = await response.json();
       if (response.ok) {
-        setMessage(result.message);
+        setMessage("Offre supprimée avec succès !");
         fetchOffres();
       } else {
         setMessage(result.message || "Erreur lors de la suppression");
@@ -156,7 +161,6 @@ const OffreListManager = () => {
 
   return (
     <div className="site-wrap">
-      {/* Hero Section */}
       <section
         className="section-hero overlay inner-page bg-image"
         style={{ backgroundImage: "url('https://themewagon.github.io/jobboard/images/hero_1.jpg')" }}
@@ -167,7 +171,7 @@ const OffreListManager = () => {
             <div className="col-md-7">
               <h1 className="text-white font-weight-bold">Manage Job Offers</h1>
               <div className="custom-breadcrumbs">
-                <a href="#">Home</a> <span className="mx-2 slash">/</span>
+                <a href="/">Home</a> <span className="mx-2 slash">/</span>
                 <span className="text-white"><strong>Manage Offers</strong></span>
               </div>
             </div>
@@ -175,7 +179,6 @@ const OffreListManager = () => {
         </div>
       </section>
 
-      {/* Main Section */}
       <section className="site-section">
         <div className="container">
           <div className="row mb-5">
@@ -186,7 +189,6 @@ const OffreListManager = () => {
             </div>
           </div>
 
-          {/* Form */}
           <div className="row mb-5">
             <div className="col-lg-12">
               <form className="p-4 p-md-5 border rounded">
@@ -283,7 +285,6 @@ const OffreListManager = () => {
 
                 {message && <p className="text-center text-danger mt-3">{message}</p>}
 
-                {/* Buttons at the Bottom */}
                 <div className="row mt-4">
                   <div className="col-md-12">
                     <div className="d-flex justify-content-end">

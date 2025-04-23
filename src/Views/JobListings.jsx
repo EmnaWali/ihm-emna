@@ -11,7 +11,7 @@ const JobListings = () => {
     disciplineId: "", // Remplacé secteurId par disciplineId
     idSpecialite: "", // Remplacé specialiteId par idSpecialite
     typeContrat: "", // Gardé typeContrat
-    time: "", // Remplacé niveauEtude par time pour correspondre au backend
+    time: "",
   });
 
   useEffect(() => {
@@ -42,15 +42,18 @@ const JobListings = () => {
     setLoading(true);
     try {
       const params = {};
-      if (filters.disciplineId) params.disciplineId = filters.disciplineId; 
-      if (filters.idSpecialite) params.idSpecialite = filters.idSpecialite; 
+      if (filters.disciplineId) params.disciplineId = filters.disciplineId;
+      if (filters.idSpecialite) params.idSpecialite = filters.idSpecialite;
       if (filters.typeContrat) params.typeContrat = filters.typeContrat;
       if (filters.time) params.time = filters.time;
 
-      const response = await axios.get("https://localhost:7020/api/Offre/all", {
-        params,
-      });
-      setJobs(response.data);
+      const response = await axios.get(
+        "https://localhost:7020/api/Offre/allValid",
+        {
+          params,
+        }
+      );
+      setJobs(response.data.offres);
     } catch (error) {
       console.error("Erreur lors du chargement des offres:", error);
     } finally {
@@ -103,7 +106,7 @@ const JobListings = () => {
                     À propos
                   </a>
                   <a
-                    href="post-job.html"
+                    href="/loginsoc"
                     className="btn btn-outline-primary border-width-2 d-none d-lg-inline-block mr-3"
                   >
                     <span className="mr-2 icon-add"></span>Publier une mission
@@ -192,8 +195,8 @@ const JobListings = () => {
                       className="form-control form-control-lg"
                     >
                       <option value="">Horaire</option>
-                      <option value="Part Time">Part Time</option>
-                      <option value="Full Time">Full Time</option>
+                      <option value="Part Time">Temps partiel</option>
+                      <option value="Full Time">Temps plein</option>
                     </select>
                   </div>
                   <div
@@ -270,7 +273,14 @@ const JobListings = () => {
                           {job.raisonSociale || "Unknown Company"}
                         </strong>
                       </div>
-                      <p>{job.description}</p>
+                      <p>
+                        {job.description.length > 150
+                          ? `${job.description.slice(0, 150)}... `
+                          : job.description}
+                        {job.description.length > 150 && (
+                          <a href={`/job/${job.id}`}></a>
+                        )}
+                      </p>
                     </div>
                     <div className="job-listing-location mb-3 mb-sm-0 custom-width w-25 text-center">
                       <span className="icon-room text-primary"></span>{" "}
@@ -279,9 +289,9 @@ const JobListings = () => {
                     <div className="job-listing-meta text-center">
                       <span
                         className={`badge ${
-                          job.time === "Part Time"
+                          job.time === "Temps partiel"
                             ? "badge-danger"
-                            : job.time === "Full Time"
+                            : job.time === "Temps plein"
                             ? "badge-success"
                             : "badge-warning"
                         }`}

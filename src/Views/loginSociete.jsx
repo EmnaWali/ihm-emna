@@ -2,10 +2,10 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-const LoginCand = () => {
+const LoginSoc = ({ onLoginSuccess, redirectPath = "/offre-list-manager", title = "Connexion Employeur" }) => {
   const [formData, setFormData] = useState({ email: "", mdp: "" });
   const [message, setMessage] = useState("");
-  const navigate = useNavigate(); // pour redirection
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -17,36 +17,38 @@ const LoginCand = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     const dataToSend = { email: formData.email, mdp: formData.mdp };
-  
+
     try {
-      const response = await fetch("https://localhost:7020/api/auth/login/candidat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
-      });
-  
-      const result = await response.json();
-  
-      if (response.ok) {
-        // Vérification du rôle
-        if (result.role !== "Candidat") {
-          setMessage("Accès non autorisé. Veuillez utiliser le login pour candidats.");
-          return;
+      const response = await fetch(
+        "https://localhost:7020/api/Auth/login/societe",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dataToSend),
         }
-  
-        localStorage.setItem("candidatId", result.candidatId);
-  
-        navigate("/");
+      );
+
+      const result = await response.json();
+      console.log("Login response:", result);
+
+      if (response.ok) {
+        localStorage.setItem("SocieteId", result.societeId);
+        console.log("SocieteId stored in localStorage:", localStorage.getItem("SocieteId"));
+
+        if (onLoginSuccess) onLoginSuccess(result);
+
+        // Pass societeId via state during navigation
+        navigate(redirectPath, { state: { societeId: result.id } });
       } else {
         setMessage(result.message || "Erreur lors de la connexion.");
       }
     } catch (error) {
+      console.error("Erreur lors de la connexion:", error);
       setMessage("Erreur réseau. Veuillez réessayer.");
     }
   };
-  
 
   return (
     <>
@@ -58,6 +60,17 @@ const LoginCand = () => {
         }}
         id="home-section"
       >
+        <div className="container">
+          <div className="row">
+            <div className="col-md-7">
+              <h1 className="text-white font-weight-bold">{title}</h1>
+              <div className="custom-breadcrumbs">
+                <a href="/">Accueil</a> <span className="mx-2 slash">/</span>
+                <span className="text-white"><strong>{title}</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <div className="container my-5">
@@ -65,7 +78,7 @@ const LoginCand = () => {
           <div className="col-lg-5">
             <div className="card shadow-lg border-0">
               <div className="card-body p-4">
-                <h3 className="text-center mb-4">Connexion Candidat</h3>
+                <h3 className="text-center mb-4">{title}</h3>
                 <form onSubmit={handleSubmit}>
                   <div className="form-group">
                     <label htmlFor="email" className="text-black font-weight-bold">
@@ -122,7 +135,7 @@ const LoginCand = () => {
 
                   <div className="text-center mt-3">
                     <span>Pas encore de compte ? </span>
-                    <Link to="/signupcand" className="text-primary font-weight-bold">
+                    <Link to="/signupsoc" className="text-primary font-weight-bold">
                       Créer un compte
                     </Link>
                   </div>
@@ -142,4 +155,4 @@ const LoginCand = () => {
   );
 };
 
-export default LoginCand;
+export default LoginSoc;

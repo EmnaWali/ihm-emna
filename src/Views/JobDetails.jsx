@@ -1,42 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from "react-router-dom";
+
 const JobDetails = () => {
   const [jobData, setJobData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [formData, setFormData] = useState({
+    idCandidat: localStorage.getItem('candidatId') || '',
+    idOffre: '',
+    dateCandidature: new Date().toISOString(),
+    status: 'en attente',
+    cv: null,
+    lettreMotivation: null
+  });
 
   const { id } = useParams();
 
   useEffect(() => {
     const fetchJobData = async () => {
+      console.log('Fetching job data for ID:', id);
       try {
         const response = await fetch(`https://localhost:7020/api/Offre/${id}`);
+        console.log('Fetch response status:', response.status);
         if (!response.ok) {
           throw new Error('Échec du chargement des données');
         }
         const data = await response.json();
+        console.log('Fetched job data:', data);
 
         const mappedData = {
           title: data.titre,
           company: data.raisonSociale,
           typeContrat: data.typeContrat,
-          specialite:data.nomSpecialite,
-          location:data.adresse,
-          secteur:data.nomDiscipline,
+          specialite: data.nomSpecialite,
+          location: data.adresse,
+          secteur: data.nomDiscipline,
           type: data.time,
           heroImage: data.image || 'https://via.placeholder.com/1920x1080',
           companyLogo: data.image || 'https://via.placeholder.com/100',
           bannerImage: data.image || 'https://via.placeholder.com/800x400',
           description: [data.description],
-          responsibilities: [
-            "Analyser les données et fournir des informations",
-            "Collaborer avec l'équipe",
-            "Présenter les résultats aux parties prenantes"
-          ],
-          education: [
-            `Diplôme en ${data.nomDiscipline} ou équivalent`,
-            "Expérience en analyse de données souhaitée"
-          ],
+          responsibilities: [],
+          education: [],
           benefits: [
             "Salaire compétitif",
             "Horaires flexibles",
@@ -51,33 +58,92 @@ const JobDetails = () => {
         };
 
         setJobData(mappedData);
+        setFormData(prev => ({ ...prev, idOffre: id }));
         setLoading(false);
       } catch (err) {
+        console.error('Error fetching job data:', err);
         setError(err.message);
         setLoading(false);
       }
     };
 
     fetchJobData();
-  }, []);
+  }, [id]);
 
-  if (loading) {
-    return <div>Chargement...</div>;
-  }
+  const handleChange = (e) => {
+    const { name, value, files } = e.target;
+    console.log(`Handle change - ${name}:`, files ? files[0] : value);
+    if (files) {
+      setFormData({ ...formData, [name]: files[0] });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
 
-  if (error) {
-    return <div>Erreur : {error}</div>;
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    console.log('Submitting form with data:', formData);
+
+    if (!formData.idCandidat) {
+      setError('ID Candidat requis. Veuillez vous connecter.');
+      console.error('Missing idCandidat');
+      return;
+    }
+
+    if (!formData.cv || !formData.lettreMotivation) {
+      setError('Veuillez uploader un CV et une lettre de motivation.');
+      console.error('Missing CV or LettreMotivation');
+      return;
+    }
+
+    const formDataToSend = new FormData();
+    formDataToSend.append('IdCandidat', parseInt(formData.idCandidat));
+    formDataToSend.append('IdOffre', parseInt(formData.idOffre));
+    formDataToSend.append('DateCandidature', formData.dateCandidature);
+    formDataToSend.append('Status', formData.status.toString());
+    formDataToSend.append('CV', formData.cv);
+    formDataToSend.append('LettreMotivation', formData.lettreMotivation);
+
+    try {
+      console.log('Sending request to API...');
+      const response = await fetch('https://localhost:7020/api/Candidature/create', {
+        method: 'POST',
+        body: formDataToSend
+      });
+
+      console.log('API response status:', response.status);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API error details:', errorData);
+        throw new Error(errorData.message || 'Échec de la soumission de la candidature');
+      }
+
+      const result = await response.json();
+      console.log('Candidature soumise avec succès:', result);
+      setSuccessMessage('Candidature soumise avec succès !');
+      setIsModalOpen(false);
+      setFormData({
+        idCandidat: localStorage.getItem('candidatId') || '',
+        idOffre: id,
+        dateCandidature: new Date().toISOString(),
+        status: 'en attente',
+        cv: null,
+        lettreMotivation: null
+      });
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      console.error('Erreur lors de la soumission:', err);
+      setError(err.message);
+    }
+  };
+
+  if (loading) return <div>Chargement...</div>;
+  if (error) return <div>Erreur : {error}</div>;
 
   return (
     <div>
-      <section
-        className="section-hero overlay inner-page bg-image"
-        style={{
-          backgroundImage: "url('https://themewagon.github.io/jobboard/images/hero_1.jpg')",
-        }}
-        id="home-section"
-      >
+      <section className="section-hero overlay inner-page bg-image" style={{ backgroundImage: "url('https://themewagon.github.io/jobboard/images/hero_1.jpg')" }} id="home-section">
         <div className="container">
           <div className="row">
             <div className="col-md-7">
@@ -94,6 +160,11 @@ const JobDetails = () => {
 
       <section className="site-section">
         <div className="container">
+          {successMessage && (
+            <div className="alert alert-success" role="alert">
+              {successMessage}
+            </div>
+          )}
           <div className="row align-items-center mb-5">
             <div className="col-lg-8 mb-4 mb-lg-0">
               <div className="d-flex align-items-center">
@@ -112,11 +183,11 @@ const JobDetails = () => {
             </div>
             <div className="col-lg-4">
               <div className="row">
+                <div className="col-6"></div>
                 <div className="col-6">
-
-                </div>
-                <div className="col-6">
-                  <button className="btn btn-block btn-primary btn-md">Postuler</button>
+                  <button className="btn btn-block btn-primary btn-md" onClick={() => setIsModalOpen(true)}>
+                    Postuler
+                  </button>
                 </div>
               </div>
             </div>
@@ -125,20 +196,13 @@ const JobDetails = () => {
           <div className="row">
             <div className="col-lg-8">
               <figure className="mb-5">
-                <img
-                  src="https://themewagon.github.io/jobboard/images/job_single_img_1.jpg"
-                  alt="Bannière"
-                  className="img-fluid rounded"
-                />
+                <img src="https://themewagon.github.io/jobboard/images/job_single_img_1.jpg" alt="Bannière" className="img-fluid rounded" />
               </figure>
 
               <h3 className="h5 text-primary">Description du Poste</h3>
               {jobData.description.map((para, idx) => (
                 <p key={idx}>{para}</p>
               ))}
-
-
-                
 
               <h3 className="h5 text-primary">Autres Avantages</h3>
               <ul className="list-unstyled">
@@ -162,14 +226,58 @@ const JobDetails = () => {
                   <li><strong>Sexe :</strong> {jobData.summary.gender}</li>
                   <li><strong>Spécialités :</strong> {jobData.specialite}</li>
                   <li><strong>Secteur :</strong> {jobData.secteur}</li>
-
-
                 </ul>
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      {isModalOpen && (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <form onSubmit={handleSubmit}>
+                <div className="modal-header">
+                  <h5 className="modal-title">Postuler à l'offre</h5>
+                  <button type="button" className="close" onClick={() => setIsModalOpen(false)}>
+                    <span>×</span>
+                  </button>
+                </div>
+                <div className="modal-body">
+
+                  <div className="form-group">
+                    <label>CV</label>
+                    <input 
+                      type="file" 
+                      name="cv" 
+                      className="form-control" 
+                      onChange={handleChange} 
+                      accept=".pdf,.doc,.docx"
+                      required 
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Lettre de Motivation</label>
+                    <input 
+                      type="file" 
+                      name="lettreMotivation" 
+                      className="form-control" 
+                      onChange={handleChange} 
+                      accept=".pdf,.doc,.docx"
+                      required 
+                    />
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="submit" className="btn btn-primary">Envoyer</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Annuler</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
